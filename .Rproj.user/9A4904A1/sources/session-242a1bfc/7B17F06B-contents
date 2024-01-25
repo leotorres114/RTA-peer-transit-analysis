@@ -1,0 +1,416 @@
+library(tidyverse)
+library(here)
+library(cmapplot)
+
+# run get_data.R script
+source("src/get_data.R")
+
+# Import NTD peer data ---------------------------------------------------------
+
+rev_miles <- read_csv(here("processed_data", "vrm_peers_monthly.csv"))
+rev_hrs <- read_csv(here("processed_data", "vrh_peers_monthly.csv"))
+ridership <- read_csv(here("processed_data", "ridership_peers_monthly.csv"))
+
+# Clean and re-format for peer charts -------------------------------------
+
+# Combine directly operated (DO) and purchased transportation (PT) figures
+rev_miles <- rev_miles %>% 
+  group_by(across(c(-type_of_svc, -vrm))) %>% 
+  summarise(vrm = sum(vrm))
+
+rev_hrs <- rev_hrs %>% 
+  group_by(across(c(-type_of_svc, -vrh))) %>% 
+  summarise(vrh = sum(vrh))
+
+ridership <- ridership %>% 
+  group_by(across(c(-type_of_svc, -ridership))) %>% 
+  summarise(ridership = sum(ridership))
+
+# Add projections for remainder of 2023 based on monthly average for each metric
+
+#   - Revenue miles projection
+rev_miles_temp <- rev_miles %>% 
+  filter(year ==2023) %>% 
+  pivot_wider(., names_from = c(month, year), values_from = vrm, names_sep = "/") 
+
+rev_miles_temp$`11/2023` <- rowMeans(subset(rev_miles_temp, select = c(7:16)))
+rev_miles_temp$`12/2023` <- rowMeans(subset(rev_miles_temp, select = c(7:16)))
+
+rev_miles_temp <- rev_miles_temp %>% 
+  select(-7:-16) %>% 
+  pivot_longer(., 
+               cols = `11/2023`:`12/2023`,
+               names_to = c("month", "year"),
+               values_to = "vrm",
+               names_sep = "/",
+               names_transform = as.integer)
+
+rev_miles <- rbind(rev_miles, rev_miles_temp) %>% arrange(agency, mode, year)
+
+#   - Revenue hours projection
+rev_hrs_temp <- rev_hrs %>% 
+  filter(year ==2023) %>% 
+  pivot_wider(., names_from = c(month, year), values_from = vrh, names_sep = "/") 
+
+rev_hrs_temp$`11/2023` <- rowMeans(subset(rev_hrs_temp, select = c(7:16)))
+rev_hrs_temp$`12/2023` <- rowMeans(subset(rev_hrs_temp, select = c(7:16)))
+
+rev_hrs_temp <- rev_hrs_temp %>% 
+  select(-7:-16) %>% 
+  pivot_longer(., 
+               cols = `11/2023`:`12/2023`,
+               names_to = c("month", "year"),
+               values_to = "vrh",
+               names_sep = "/",
+               names_transform = as.integer)
+
+rev_hrs <- rbind(rev_hrs, rev_hrs_temp) %>% arrange(agency, mode, year)
+
+#   - Ridership projection
+ridership_temp <- ridership %>% 
+  filter(year ==2023) %>% 
+  pivot_wider(., names_from = c(month, year), values_from = ridership, names_sep = "/") 
+
+ridership_temp$`11/2023` <- rowMeans(subset(ridership_temp, select = c(7:16)))
+ridership_temp$`12/2023` <- rowMeans(subset(ridership_temp, select = c(7:16)))
+
+ridership_temp <- ridership_temp %>% 
+  select(-7:-16) %>% 
+  pivot_longer(., 
+               cols = `11/2023`:`12/2023`,
+               names_to = c("month", "year"),
+               values_to = "ridership",
+               names_sep = "/",
+               names_transform = as.integer)
+
+ridership <- rbind(ridership, ridership_temp) %>% arrange(agency, mode, year)
+
+# remove temp df's
+rm(rev_miles_temp, rev_hrs_temp, ridership_temp)
+
+# export monthly data
+write_csv(rev_miles, here("processed_data", "vrm_peers_monthly_clean.csv"))
+write_csv(rev_hrs, here("processed_data", "vrh_peers_monthly_clean.csv"))
+write_csv(ridership, here("processed_data", "ridership_peers_monthly_clean.csv"))
+
+# calculate annual figures for each agency and mode for all years
+rev_miles <- rev_miles %>% 
+  group_by(mode, acronym, year) %>% 
+  summarise(vrm = sum(vrm)) %>% 
+  pivot_wider(., names_from = year, values_from = vrm) %>% 
+  rename(agency = acronym)
+  
+rev_hrs <- rev_hrs %>% 
+  group_by(mode, acronym, year) %>% 
+  summarise(vrh = sum(vrh)) %>% 
+  pivot_wider(., names_from = year, values_from = vrh) %>% 
+  rename(agency = acronym)
+
+ridership <- ridership %>% 
+  group_by(mode, acronym, year) %>% 
+  summarise(ridership = sum(ridership)) %>% 
+  pivot_wider(., names_from = year, values_from = ridership) %>% 
+  rename(agency = acronym)
+
+write_csv(rev_miles, here("processed_data", "vrm_peers_annual.csv"))
+write_csv(rev_hrs, here("processed_data", "vrh_peers_annual.csv"))
+write_csv(ridership, here("processed_data", "ridership_peers_annual.csv"))
+
+# filter for 2019 - 2023
+rev_miles <- rev_miles %>% 
+  select(-3:-19)
+
+rev_hrs <- rev_hrs %>% 
+  select(-3:-19)
+
+ridership <- ridership %>% 
+  select(-3:-19)
+
+# calculate share of 2019 for each year
+
+rev_miles_precov_share <- rev_miles %>% 
+  pivot_longer(`2019`:`2023`, names_to = "year", values_to = "rev_miles") %>% 
+  group_by(mode, agency) %>% 
+  mutate(share = rev_miles / first(rev_miles)) %>% 
+  ungroup() %>% 
+  mutate(across(mode, ~factor(., levels=c("urban_rail", "urban_bus", "commuter_rail", "suburban_bus"))))
+
+rev_hrs_precov_share <- rev_hrs %>% 
+  pivot_longer(`2019`:`2023`, names_to = "year", values_to = "rev_hrs") %>% 
+  group_by(mode, agency) %>% 
+  mutate(share = rev_hrs / first(rev_hrs))%>% 
+  ungroup() %>% 
+  mutate(across(mode, ~factor(., levels=c("urban_rail", "urban_bus", "commuter_rail", "suburban_bus"))))
+
+
+ridership_precov_share <- ridership %>% 
+  pivot_longer(`2019`:`2023`, names_to = "year", values_to = "ridership") %>% 
+  group_by(mode, agency) %>% 
+  mutate(share = ridership / first(ridership))%>% 
+  ungroup() %>% 
+  mutate(across(mode, ~factor(., levels=c("urban_rail", "urban_bus", "commuter_rail", "suburban_bus"))))
+
+
+# Peer summary charts ----------------------------------------------------
+
+modes <- c(
+  urban_rail = "Urban Rail",
+  urban_bus = "Urban Bus",
+  commuter_rail = "Commuter Rail",
+  suburban_bus = "Suburban Bus"
+)
+
+# revenue miles
+rev_miles_summary <- rev_miles_precov_share %>% 
+  ggplot(aes(x = year, y = share, group = agency, color = agency)) +
+  geom_line(linewidth = 1.5) +
+  gghighlight::gghighlight(agency == "CTA" | agency == "Metra" | agency == "Pace", 
+                           calculate_per_facet = TRUE,
+                           use_direct_label = FALSE) +
+  theme_cmap(panel.grid.major.x = element_blank(),
+             gridlines = "h") +
+  #scale_color_manual(values = c("#008fd5","#1e478e","#6dae4f","#d3b42b","#2d4147")) +
+  scale_color_manual(values = c(CTA = '#008fd5', Metra = '#6dae4f', `Pace` = '#d3b42b') ) + 
+  scale_y_continuous(labels = scales::label_percent(accuracy = 1)) + 
+  #scale_x_discrete(expand = c(0.03,0.03)) +
+  theme(legend.position = "none")+
+  facet_wrap(~mode,
+             labeller = as_labeller(modes))
+
+finalize_plot(rev_miles_summary,
+              title = 'Revenue miles as a share of 2019 on <span style="color:#008fd5;">CTA</span>, <span style="color:#6dae4f;">Metra</span> and <span style="color:#d3b42b;">Pace</span> relative to peer systems',
+              caption = "Peer systems include:<br><br>
+              <b>Urban rail</b>: NYC MTA, MBTA, WMATA, SEPTA, and MARTA
+              <b>Urban bus</b>: NYC MTA, MBTA, WMATA, SEPTA, and LA Metro
+              <b>Commuter rail</b>: MBTA, Metro North, Long Island Railroad, NJ Transit, SEPTA
+              <br><b>Suburban bus</b>: AC Transit, Broward County Transit, OCTA, RIDE ON Montgomery, VTA
+              <br><br>2023 forecast is derived from average monthly figures between January and August.
+              <br><br>
+              Source: Chicago Metropolitan Agency for Planning 
+              analysis of the National Transit Database.",
+              #sidebar_width = 0,
+              filename = here("charts", "rev_miles_summary"),
+              #width = 40/3/1.3,
+              #height = 7.36/1.3,
+              mode = "png",
+              overwrite = T)
+
+#revenue hours
+rev_hrs_summary <- rev_hrs_precov_share %>% 
+  ggplot(aes(x = year, y = share, group = agency, color = agency)) +
+  geom_line(linewidth = 1.5) +
+  gghighlight::gghighlight(agency == "CTA" | agency == "Metra" | agency == "Pace", 
+                           calculate_per_facet = TRUE,
+                           use_direct_label = FALSE) +
+  theme_cmap(panel.grid.major.x = element_blank(),
+             gridlines = "h") +
+  #scale_color_manual(values = c("#008fd5","#1e478e","#6dae4f","#d3b42b","#2d4147")) +
+  scale_color_manual(values = c(CTA = '#008fd5', Metra = '#6dae4f', `Pace` = '#d3b42b') ) + 
+  scale_y_continuous(labels = scales::label_percent(accuracy = 1)) + 
+  #scale_x_discrete(expand = c(0.03,0.03)) +
+  theme(legend.position = "none")+
+  facet_wrap(~mode,
+             labeller = as_labeller(modes))
+
+finalize_plot(rev_hrs_summary,
+              title = 'Revenue hours as a share of 2019 on <span style="color:#008fd5;">CTA</span>, <span style="color:#6dae4f;">Metra</span> and <span style="color:#d3b42b;">Pace</span> relative to peer systems',
+              caption = "Peer systems include:<br><br>
+              <b>Urban rail</b>: NYC MTA, MBTA, WMATA, SEPTA, and MARTA
+              <b>Urban bus</b>: NYC MTA, MBTA, WMATA, SEPTA, and LA Metro
+              <b>Commuter rail</b>: MBTA, Metro North, Long Island Railroad, NJ Transit, SEPTA
+              <br><b>Suburban bus</b>: AC Transit, Broward County Transit, OCTA, RIDE ON Montgomery, VTA
+              <br><br>2023 forecast is derived from average monthly figures between January and August.
+              <br><br>
+              Source: Chicago Metropolitan Agency for Planning 
+              analysis of the National Transit Database.",
+              #sidebar_width = 0,
+              filename = here("charts", "rev_hrs_summary"),
+              #width = 40/3/1.3,
+              #height = 7.36/1.3,
+              mode = "png",
+              overwrite = T)
+
+# ridership
+ridership_summary <- ridership_precov_share %>% 
+  ggplot(aes(x = year, y = share, group = agency, color = agency)) +
+  geom_line(linewidth = 1.5) +
+  gghighlight::gghighlight(agency == "CTA" | agency == "Metra" | agency == "Pace", 
+                           calculate_per_facet = TRUE,
+                           use_direct_label = FALSE) +
+  theme_cmap(panel.grid.major.x = element_blank(),
+             gridlines = "h") +
+  #scale_color_manual(values = c("#008fd5","#1e478e","#6dae4f","#d3b42b","#2d4147")) +
+  scale_color_manual(values = c(CTA = '#008fd5', Metra = '#6dae4f', `Pace` = '#d3b42b') ) + 
+  scale_y_continuous(labels = scales::label_percent(accuracy = 1)) + 
+  #scale_x_discrete(expand = c(0.03,0.03)) +
+  theme(legend.position = "none")+
+  facet_wrap(~mode,
+             labeller = as_labeller(modes))
+
+finalize_plot(ridership_summary,
+              title = 'Ridership as a share of 2019 on <span style="color:#008fd5;">CTA</span>, <span style="color:#6dae4f;">Metra</span> and <span style="color:#d3b42b;">Pace</span> relative to peer systems',
+              caption = "Peer systems include:<br><br>
+              <b>Urban rail</b>: NYC MTA, MBTA, WMATA, SEPTA, and MARTA
+              <b>Urban bus</b>: NYC MTA, MBTA, WMATA, SEPTA, and LA Metro
+              <b>Commuter rail</b>: MBTA, Metro North, Long Island Railroad, NJ Transit, SEPTA
+              <br><b>Suburban bus</b>: AC Transit, Broward County Transit, OCTA, RIDE ON Montgomery, VTA
+              <br><br>2023 forecast is derived from average monthly figures between January and August.
+              <br><br>
+              Source: Chicago Metropolitan Agency for Planning 
+              analysis of the National Transit Database.",
+              #sidebar_width = 0,
+              filename = here("charts", "ridership_summary"),
+              #width = 40/3/1.3,
+              #height = 7.36/1.3,
+              mode = "png",
+              overwrite = T)
+
+# (NEED TO ARCHIVE) Ridership and rev hours dumbbell -------------------------------------------------
+modes_loop <- c(
+  "urban_rail",
+  "urban_bus",
+  "commuter_rail",
+  "suburban_bus"
+)
+
+hrs_ridership <- rev_hrs_precov_share %>% 
+  rename(share_hrs = share) %>% 
+  left_join(ridership_precov_share %>% 
+              rename(share_ridership = share), by = c("mode", "agency", "year")) %>% 
+  mutate(diff = share_hrs - share_ridership) %>% 
+  filter(year != "2019")
+
+# Ridership and rev hours chart
+
+for(i in modes_loop) {
+temp_plot <- ggplot(hrs_ridership %>% filter(mode == i)) +
+  geom_segment(aes(x = year, y = share_ridership,
+               yend = share_hrs, xend = year),
+               color = "#aeb6bf",
+               size = 4.5) +
+  theme_cmap() +
+  geom_point(aes(x = year, y = share_hrs), size = 4, color = "#6dae4f")+
+  geom_point(aes(x = year, y = share_ridership), size = 4, color = "#eb6a60")+
+  scale_y_continuous(labels = scales::label_percent(accuracy = 1),
+                     breaks = c(0,.2,.4,.6,.8,1)) + 
+  geom_label(aes(label = paste0(round(diff * 100, digits = 0), "%"), 
+                x = year, 
+                y = share_ridership + (diff/2)), 
+            color = "#4a4e4d", 
+            size = 3,
+            fill="#FFFFFF",
+            family = "Whitney") +
+  facet_wrap(~agency)
+
+finalize_plot(temp_plot,
+              title = paste0('<span style="color:#eb6a60;">Ridership</span> and <span style="color:#6dae4f;">revenue hours</span> as a share of 2019 on RTA and peer systems for ', modes[i]),
+              caption = "2023 forecast is derived from average monthly figures between January and August.
+              <br><br>
+              Source: Chicago Metropolitan Agency for Planning 
+              analysis of the National Transit Database.",
+              #sidebar_width = 0,
+              filename = here("charts", paste0(i, "_dumbell")),
+              #width = 40/3/1.3,
+              #height = 7.36/1.3,
+              mode = "png",
+              overwrite = T)
+}
+
+# Revenue hours by mode - detailed ---------------------------------------------------
+for (i in modes_loop) {
+temp_plot <- rev_hrs_precov_share %>% filter(mode == i) %>% 
+  ggplot(aes(x = year, y = share, group = agency, color = agency)) +
+  geom_line(linewidth = 1.5) +
+  theme_cmap(panel.grid.major.x = element_blank(),
+             gridlines = "h") +
+  scale_color_manual(values = c("#008fd5","#1e478e","#6dae4f","#d3b42b","#1d0d33", "#eb6a60")) +
+  scale_y_continuous(labels = scales::label_percent(accuracy = 1)) + 
+  scale_x_discrete(expand = expansion(add = c(0.10, .8))) + 
+  geom_text_lastonly(
+    mapping = aes(label = paste0(agency, " , ", scales::percent(share,accuracy = 1))),
+    add_points = TRUE,
+    #nudge_x = 10,
+    #nudge_y = -.03,
+    text_aes = list(size=2.75, family="Whitney")) +
+  coord_cartesian(clip = "off") +
+  theme(legend.position = "none")
+
+finalize_plot(temp_plot,
+              title = paste0('Revenue hours as a share of 2019 on RTA and peer systems for ', modes[i]),
+              caption = "2023 forecast is derived from average monthly figures between January and August.
+              <br><br>
+              Source: Chicago Metropolitan Agency for Planning 
+              analysis of the National Transit Database.",
+              #sidebar_width = 0,
+              filename = here("charts", paste0(i, "_rev_hrs_detailed")),
+              #width = 40/3/1.3,
+              #height = 7.36/1.3,
+              mode = "png",
+              overwrite = T)
+}
+
+# Revenue miles by mode - detailed ---------------------------------------------------
+for (i in modes_loop) {
+  temp_plot <- rev_miles_precov_share %>% filter(mode == i) %>% 
+    ggplot(aes(x = year, y = share, group = agency, color = agency)) +
+    geom_line(linewidth = 1.5) +
+    theme_cmap(panel.grid.major.x = element_blank(),
+               gridlines = "h") +
+    scale_color_manual(values = c("#008fd5","#1e478e","#6dae4f","#d3b42b","#1d0d33", "#eb6a60")) +
+    scale_y_continuous(labels = scales::label_percent(accuracy = 1)) + 
+    scale_x_discrete(expand = expansion(add = c(0.10, .8))) + 
+    geom_text_lastonly(
+      mapping = aes(label = paste0(agency, " , ", scales::percent(share,accuracy = 1))),
+      add_points = TRUE,
+      #nudge_x = 10,
+      #nudge_y = -.03,
+      text_aes = list(size=2.75, family="Whitney")) +
+    coord_cartesian(clip = "off") +
+    theme(legend.position = "none")
+  
+  finalize_plot(temp_plot,
+                title = paste0('Revenue miles as a share of 2019 on RTA and peer systems for ', modes[i]),
+                caption = "2023 forecast is derived from average monthly figures between January and August.
+              <br><br>
+              Source: Chicago Metropolitan Agency for Planning 
+              analysis of the National Transit Database.",
+                #sidebar_width = 0,
+                filename = here("charts", paste0(i, "_rev_miles_detailed")),
+                #width = 40/3/1.3,
+                #height = 7.36/1.3,
+                mode = "png",
+                overwrite = T)
+}
+
+# Ridership by mode - detailed -------------------------------------------------------
+  for (i in modes_loop) {
+    temp_plot <- ridership_precov_share %>% filter(mode == i) %>% 
+      ggplot(aes(x = year, y = share, group = agency, color = agency)) +
+      geom_line(linewidth = 1.5) +
+      theme_cmap(panel.grid.major.x = element_blank(),
+                 gridlines = "h") +
+      scale_color_manual(values = c("#008fd5","#1e478e","#6dae4f","#d3b42b","#1d0d33", "#eb6a60")) +
+      scale_y_continuous(labels = scales::label_percent(accuracy = 1)) + 
+      scale_x_discrete(expand = expansion(add = c(0.10, .8))) + 
+      geom_text_lastonly(
+        mapping = aes(label = paste0(agency, " , ", scales::percent(share,accuracy = 1))),
+        add_points = TRUE,
+        #nudge_x = 10,
+        #nudge_y = -.03,
+        text_aes = list(size=2.75, family="Whitney")) +
+      coord_cartesian(clip = "off") +
+      theme(legend.position = "none")
+    
+    finalize_plot(temp_plot,
+                  title = paste0('Ridership as a share of 2019 on RTA and peer systems for ', modes[i]),
+                  caption = "2023 forecast is derived from average monthly figures between January and August.
+              <br><br>
+              Source: Chicago Metropolitan Agency for Planning 
+              analysis of the National Transit Database.",
+                  #sidebar_width = 0,
+                  filename = here("charts", paste0(i, "ridership_detailed")),
+                  #width = 40/3/1.3,
+                  #height = 7.36/1.3,
+                  mode = "png",
+                  overwrite = T)
+  }

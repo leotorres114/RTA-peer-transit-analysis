@@ -1,0 +1,234 @@
+
+################################################################################
+# Load libraries
+################################################################################
+
+library(tidyverse)
+library(cmapplot)
+library(cmapgeo)
+library(lubridate)
+
+
+################################################################################
+# Load data
+################################################################################
+
+ridership_data <- read_csv("https://rtams.org/sites/default/files/DailyRidershipCountbyMode_PublicFacing.csv") %>%
+  mutate(date = mdy(date)) %>%
+  mutate(across(c(METRA,`CTA RAIL`,`CTA BUS`), ~as.numeric(gsub(",","",.))))
+
+################################################################################
+# Visualize
+################################################################################
+
+ridership_by_week <-
+  ridership_data %>% 
+  # Pivot
+  pivot_longer(cols = c(METRA:`CTA BUS`)) %>%
+  # Rename
+  mutate(name = case_when(
+    name == "CTA BUS" ~ "CTA Bus",
+    name == "CTA RAIL" ~ "CTA Rail",
+    name == "METRA" ~ "Metra",
+    name == "PACE" ~ "Pace"
+  )) %>% 
+  group_by(date) %>% 
+  # Add system totals
+  bind_rows(summarize(.,
+                      name = "Total",
+                      value = sum(value))) %>% 
+  # Now group by week and mode
+  group_by(week = floor_date(date,unit = "week"),
+           name) %>% 
+  summarize(value = sum(value,na.rm = TRUE)) %>% 
+  # And calculate share vs first week
+  group_by(name) %>% 
+  mutate(share = value/first(value)-1) %>% 
+  # Remove weeks with CTA data issue from CTA and system totals
+  # filter(!((week == "2021-07-04") & 
+             # name %in% c("CTA Bus","CTA Rail","Total"))) %>% 
+  # Remove last weeks of data, which is incomplete for all systems
+  filter(!week >= "2023-03-18")
+
+write.csv(ridership_by_week,"ridership")
+
+ridership_p1 <-
+  ridership_by_week %>% 
+  ggplot(aes(x = week, y = share, color = name)) +
+  geom_line(linewidth=1.2) +
+  # Adjust labels as needed
+  geom_text_lastonly(
+    mapping = aes(label = ifelse(name %in% c("CTA Bus"),
+                                 scales::percent(share,accuracy = 1),
+                                 "")),
+    add_points = TRUE,
+    nudge_x = 10,
+    nudge_y = 0.03,
+    text_aes = list(size=3.5)) +
+  # Adjust labels as needed
+  geom_text_lastonly(
+    mapping = aes(label = ifelse(name %in% c("Pace"),
+                                 scales::percent(share,accuracy = 1),
+                                 "")),
+    add_points = TRUE,
+    nudge_x = 10,
+    nudge_y = .01,
+    text_aes = list(size=3.5)) +
+  # Adjust labels as needed
+  geom_text_lastonly(
+    mapping = aes(label = ifelse(name %in% c("Total"),
+                                 scales::percent(share,accuracy = 1),
+                                 "")),
+    add_points = TRUE,
+    nudge_x = 10,
+    nudge_y = .03,
+    text_aes = list(size=3.5)) +
+  # Adjust labels as needed
+  geom_text_lastonly(
+    mapping = aes(label = ifelse(name %in% c("CTA Rail"),
+                                 scales::percent(share,accuracy = 1),
+                                 "")),
+    add_points = TRUE,
+    nudge_x = 10,
+    nudge_y = -.005,
+    text_aes = list(size=3.5)) +
+  # Labels that don't need to be nudged
+  geom_text_lastonly(
+    mapping = aes(label = ifelse(name %in% c("Metra"),
+                                 scales::percent(share,accuracy = 1),
+                                 "")),
+    add_points = TRUE,
+    nudge_x = 10,
+    nudge_y = -.03,
+    text_aes = list(size=3.5)) +
+    coord_cartesian(clip = "off") +
+  
+  theme_cmap(panel.grid.major.x = element_line(color = "light gray"),
+             gridlines = "h") +
+  
+  scale_color_manual(values = c("#008fd5","#1e478e","#6dae4f","#d3b42b","#2d4147")) +
+  scale_y_continuous(labels = scales::label_percent(accuracy = 1)) +
+  scale_x_date(date_breaks = "3 months",
+               labels = scales::label_date(format = "%b '%y")) + 
+  
+  #holidays call out
+  annotate(geom = "text",
+           label = "Thanksgiving and\n Christmas holiday",
+           x = mdy("12/25/2022"), 
+           y = -.90, 
+           size = 3,
+           fontface = "bold") + 
+    geom_curve(
+      x = mdy("10/19/2022"), xend = mdy("11/10/2022"), 
+      y = -0.87, yend= -0.66,
+      arrow = arrow(type = "open", length = unit(0.02, "npc")),
+      curvature = -0.6) + 
+    geom_curve(
+      x = mdy("01/30/2023"), xend = mdy("01/05/2023"), 
+      y = -0.86, yend= -0.76,
+      arrow = arrow(type = "open", length = unit(0.02, "npc")),
+      curvature = 0.3) + 
+  
+  #omicron call out
+  annotate(geom = "text",
+           label = "Omicron wave",
+           x = mdy("10/01/2021"), 
+           y = -.90, 
+           size = 3,
+           fontface = "bold") + 
+  geom_curve(
+    x = mdy("11/21/2021"), xend = mdy("12/25/2021"), 
+    y = -0.90, yend= -0.87,
+    arrow = arrow(type = "open", length = unit(0.02, "npc")),
+    curvature = 0.5)
+
+  
+
+finalize_plot(ridership_p1,
+              title = "Decline in weekly transit ridership since the first week of March 2020",
+              caption = "Source: Chicago Metropolitan Agency for Planning 
+              analysis of Regional Transportation Authority data through the week of March 12, 2023.",
+              sidebar_width = 0,
+              filename = "ridership_p1",
+              width = 40/3/1.3,
+              height = 7.36/1.3,
+              mode = "png",
+              overwrite = T)
+
+#############################################################################
+# Bus highlight plot
+#############################################################################
+
+ridership_p2 <-
+  ridership_by_week %>% 
+  ggplot(aes(x = week, y = share, color = name)) +
+  geom_line(linewidth=1.2) +
+  # Adjust labels as needed
+  geom_text_lastonly(
+    mapping = aes(label = ifelse(name %in% c("CTA Bus"),
+                                 scales::percent(share,accuracy = 1),
+                                 "")),
+    add_points = F,
+    nudge_x = 10,
+    nudge_y = 0.03,
+    text_aes = list(size=4)) +
+  # Adjust labels as needed
+  geom_text_lastonly(
+    mapping = aes(label = ifelse(name %in% c("Pace"),
+                                 scales::percent(share,accuracy = 1),
+                                 "")),
+    add_points = F,
+    nudge_x = 10,
+    nudge_y = -.01,
+    text_aes = list(size=4)) +
+  # # Adjust labels as needed
+  # geom_text_lastonly(
+  #   mapping = aes(label = ifelse(name %in% c("Total"),
+  #                                scales::percent(share,accuracy = 1),
+  #                                "")),
+  #   add_points = TRUE,
+  #   nudge_x = 10,
+  #   nudge_y = .03,
+  #   text_aes = list(size=3.5)) +
+  # # Adjust labels as needed
+  # geom_text_lastonly(
+  #   mapping = aes(label = ifelse(name %in% c("CTA Rail"),
+  #                                scales::percent(share,accuracy = 1),
+  #                                "")),
+  #   add_points = TRUE,
+  #   nudge_x = 10,
+  #   nudge_y = -.005,
+  #   text_aes = list(size=3.5)) +
+  # # Labels that don't need to be nudged
+  # geom_text_lastonly(
+  #   mapping = aes(label = ifelse(name %in% c("Metra"),
+  #                                scales::percent(share,accuracy = 1),
+  #                                "")),
+  #   add_points = TRUE,
+  #   nudge_x = 10,
+  #   nudge_y = -.03,
+  #   text_aes = list(size=3.5)) +
+  # coord_cartesian(clip = "off") +
+  
+  theme_cmap(panel.grid.major.x = element_line(color = "light gray"),
+             gridlines = "h", legend.position = "none") +
+  
+  #scale_color_manual(values = c("#008fd5","#1e478e","#6dae4f","#d3b42b","#2d4147")) +
+  scale_y_continuous(labels = scales::label_percent(accuracy = 1)) +
+  scale_x_date(date_breaks = "3 months",
+               labels = scales::label_date(format = "%b '%y")) + 
+  # just to highlight buses - remove if you want the original chart
+  cmap_color_highlight(field = ridership_by_week$name, value = c("CTA Bus", "Pace"),
+                       color_value = c("#008fd5", "#d3b42b"))
+
+# run just to highlight buses!!!
+finalize_plot(ridership_p2,
+              title = 'Ridership on the <span style="color:#008fd5;">CTA Bus</span> and <span style="color:#d3b42b;">Pace Suburban Bus</span> has fared better than other modes since March 2020',
+              caption = "Source: Chicago Metropolitan Agency for Planning 
+              analysis of Regional Transportation Authority data through the week of December 4th, 2022.",
+              sidebar_width = 0,
+              filename = "ridership_buses_only",
+              width = 40/3/1.3,
+              height = 7.36/1.3,
+              mode = "png",
+              overwrite = T)

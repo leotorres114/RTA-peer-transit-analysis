@@ -1,0 +1,18 @@
+ntdid,agency,acronym,modes
+50066,Chicago Transit Authority,CTA,urban_rail/urban_bus
+90154,Los Angeles County Metropolitan Transportation Authority,LACMTA,urban_bus
+10003,Massachusetts Bay Transportation Authority,MBTA,urban_rail/urban_bus/commuter_rail
+20008,New York City Transit,NYCT,urban_rail/urban_bus
+30019,Southeastern Pennsylvania Transportation Authority,SEPTA,urban_rail/urban_bus/commuter_rail
+30030,Washington Metropolitan Area Transit Authority,WMATA,urban_rail/urban_bus
+40022,Metropolitan Atlanta Rapid Transit Authority,MARTA,urban_rail
+50118,Northeast Illinois Regional Commuter Railroad Corporation,Metra,commuter_rail
+20100,MTA Long Island Rail Road,LIRR,commuter_rail
+20078,Metro-North Commuter Railroad Company,MNCR,commuter rail
+20080,New Jersey Transit,NJT,commuter rail
+50113,Pace - Suburban Bus Division,Pace,suburban_bus
+90014,Alameda-Contra Costa Transit District,ACT,suburban_bus
+40029,Broward County Board of County Commissioners,BCT,suburban_bus
+90036,Orange County Transportation Authority,OCTA,suburban_bus
+90013,Santa Clara Valley Transportation Authority,VTA,suburban_bus
+30051,"Montgomery County, Maryland",RIDE ON,suburban_bus

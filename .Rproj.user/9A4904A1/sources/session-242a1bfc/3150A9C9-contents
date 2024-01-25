@@ -1,0 +1,16 @@
+library(tidyverse)
+library(here)
+library(readxl)
+
+# Download latest monthly data from: 
+# https://www.transit.dot.gov/ntd/data-product/monthly-module-adjusted-data-release 
+
+ridership <-
+  readxl::read_excel(path = here("data", "monthly_adjusted_oct_2023.xlsx"),
+                     sheet = "UPT")
+vrm <-
+  readxl::read_excel(path = here("data", "monthly_adjusted_oct_2023.xlsx"),
+                     sheet = "VRM")
+vrh <-
+  readxl::read_excel(path = here("data", "monthly_adjusted_oct_2023.xlsx"),
+                     sheet = "VRH")

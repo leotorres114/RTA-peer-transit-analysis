@@ -1,0 +1,28 @@
+{
+    "id": "91BABFDB",
+    "path": "C:/Users/ltorres/OneDrive - Chicago Metropolitan Agency for Planning/Documents - 2023.017 PART Implementation/2.3 Current system performance/Peer service analysis/peer_service_analysis/src/peer_analysis.R",
+    "project_path": "src/peer_analysis.R",
+    "type": "r_source",
+    "hash": "2325329853",
+    "contents": "",
+    "dirty": false,
+    "created": 1702674926726.0,
+    "source_on_save": false,
+    "relative_order": 4,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "5,24",
+        "scrollLine": "0",
+        "docOutlineVisible": "1",
+        "docOutlineSize": "118"
+    },
+    "folds": "122|22|292|0|\n293|35|347|0|\n348|35|402|0|\n403|31|451|1|\n",
+    "lastKnownWriteTime": 1706142658,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1706142658357,
+    "read_only": false,
+    "read_only_alternatives": []
+}

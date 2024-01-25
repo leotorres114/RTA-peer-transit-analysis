@@ -1,0 +1,25 @@
+ntdid,agency,acronym,mode,ntd_mode
+50066,Chicago Transit Authority,CTA,urban_rail,HR
+50066,Chicago Transit Authority,CTA,urban_bus,MB
+90154,Los Angeles County Metropolitan Transportation Authority,LACMTA,urban_bus,MB
+10003,Massachusetts Bay Transportation Authority,MBTA,urban_rail,HR
+10003,Massachusetts Bay Transportation Authority,MBTA,urban_bus,MB
+10003,Massachusetts Bay Transportation Authority,MBTA,commuter_rail,CR
+20008,New York City Transit,NYCT,urban_rail,HR
+20008,New York City Transit,NYCT,urban_bus,MB
+30019,Southeastern Pennsylvania Transportation Authority,SEPTA,urban_rail,HR
+30019,Southeastern Pennsylvania Transportation Authority,SEPTA,urban_bus,MB
+30019,Southeastern Pennsylvania Transportation Authority,SEPTA,commuter_rail,CR
+30030,Washington Metropolitan Area Transit Authority,WMATA,urban_rail,HR
+30030,Washington Metropolitan Area Transit Authority,WMATA,urban_bus,MB
+40022,Metropolitan Atlanta Rapid Transit Authority,MARTA,urban_rail,HR
+50118,Northeast Illinois Regional Commuter Railroad Corporation,Metra,commuter_rail,CR
+20100,MTA Long Island Rail Road,LIRR,commuter_rail,CR
+20078,Metro-North Commuter Railroad Company,MNCR,commuter_rail,CR
+20080,New Jersey Transit,NJT,commuter_rail,CR
+50113,Pace - Suburban Bus Division,Pace,suburban_bus,MB
+90014,Alameda-Contra Costa Transit District,ACT,suburban_bus,MB
+40029,Broward County Board of County Commissioners,BCT,suburban_bus,MB
+90036,Orange County Transportation Authority,OCTA,suburban_bus,MB
+90013,Santa Clara Valley Transportation Authority,VTA,suburban_bus,MB
+30051,"Montgomery County, Maryland",RIDE ON,suburban_bus,MB

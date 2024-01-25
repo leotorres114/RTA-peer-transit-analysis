@@ -1,0 +1,521 @@
+library(tidyverse)
+library(cmapplot)
+library(here)
+
+# Expenses Plot -----------------------------------------------------------
+
+# data
+rta <- read_csv(here("input", "part", "rta_expenses.csv")) %>% 
+  group_by(year) %>% 
+  mutate(expense = fct_rev(as_factor(expense)),
+         cost_share = cost / sum(cost),
+         year=as.character(year)) %>% 
+  ungroup()
+
+rta$label <- paste0(rta$expense," - ",as.character(round(rta$cost_share*100)),"%")
+rta$label[c(6:7,13:14)] <- NA
+
+pal <- c("#008fd5", "#6dae4f", "#d0e4a4", "#d3b42b", "#eb6a60", "#2d4147", "#2d4147")
+
+label = c()
+for (i in 1:length(rta$label)) {
+  label[i] <-  "#00093f"
+}
+
+fontface = c()
+for (i in 1:length(rta$label)) {
+  fontface[i] <-  "bold"
+}
+
+annot_text <- data.frame(
+  label = c("Other (1%)"),
+  year = "2019",
+  agency = "rta",
+  expense = "Other",
+  x = 0,
+  y = 0.99
+)
+
+annot_text_2 <- data.frame(
+  label = c("Other (1%)"),
+  year = "2023",
+  agency = "rta",
+  expense = "Other",
+  x = 0,
+  y = 0.99
+)
+
+annot_text_2019 <- data.frame(
+  label = c("$3 Billion"),
+  year = "2019",
+  agency = "rta",
+  expense = "Other",
+  x = 0,
+  y = 0.99
+)
+
+annot_text_2023 <- data.frame(
+  label = c("$3.5 Billion"),
+  year = "2023",
+  agency = "rta",
+  expense = "Other",
+  x = 0,
+  y = 0.99
+)
+
+# plot
+plot <- 
+  ggplot(data = rta, aes(x=agency, y=cost_share)) +
+  geom_bar(aes(fill=expense),stat = "identity", position = "stack", width = 0.7) + 
+  theme_cmap(xlab = element_blank(),
+             gridlines = "none", 
+             axislines = "none") + 
+  scale_y_continuous(labels = scales::label_percent(),
+                     breaks = c(0,.20,.40,.60,.80,1)) +
+  theme(axis.text.x = element_blank(),
+        strip.text = element_text(hjust = 0.5),
+        axis.text.y = element_blank(),
+        legend.position = "none",
+        ) + 
+  scale_fill_manual(values = rev(pal),
+                    name = element_blank(),
+                    labels = rev(rta$expense),
+                    guide = guide_legend(reverse = T)) +
+  geom_text(aes(label = label, hjust=0.45, fontface = fontface), size=4.7, show.legend = FALSE,
+             na.rm = TRUE, position = position_stack(vjust = 0.5, reverse = F), stat = "identity") +
+  scale_color_manual(values = label) + 
+  facet_wrap(~year, strip.position = "bottom", ncol = 2) + 
+  geom_label(data = annot_text,
+             aes(label=str_wrap(label),
+                 x=1,
+                 y=1.03,
+                 family="Whitney Semibold"),
+             size=3.6,
+             label.size = NA,
+             fill="#FFFFFF") + 
+  geom_label(data = annot_text_2,
+             aes(label=str_wrap(label),
+                 x=1,
+                 y=1.03,
+                 family="Whitney Semibold"),
+             size=3.6,
+             label.size = NA,
+             fill="#FFFFFF") + 
+  geom_label(data = annot_text_2019,
+             aes(label=str_wrap(label),
+                 x=1,
+                 y=0.5,
+                 family="Whitney Semibold"),
+             size=4.5,
+             label.size = NA,
+             fill="#FFFFFF") + 
+  geom_label(data = annot_text_2023,
+             aes(label=str_wrap(label),
+                 x=1,
+                 y=0.5,
+                 family="Whitney Semibold"),
+             size=4.5,
+             label.size = NA,
+             fill="#FFFFFF")
+
+# finalize
+finalize_plot(
+  plot = plot,
+  title = "RTA regional transit system operating budget, 2019 (actual) and 2023 (budgeted)",
+  caption = "
+  Other expenses include RTA agency operations, regional programs, joint self-insurance fund, and other misc. expenses.
+  <br><br>
+  Source: RTA Adopted 2019 and 2023 Operating Budget",
+  caption_align = 0,
+  overrides = list(
+    margin_plot_r = 0
+  ),
+  mode = "pdf", 
+  filename = here("output", "rta_expenses"),
+  overwrite = TRUE
+)
+
+# Revenues by source (2019-2023) Plot -----------------------------------------------------------
+
+#data
+rta_rev <- read_csv(here("input", "part", "rta_revenues.csv"))
+
+# pal
+pal_rev <- c("#008fd5", "#d3b42b", "#ca3428")#, "#2d4147")#ca3428
+
+#wrangle
+rev <- rta_rev %>%
+  pivot_longer(
+    cols = total_2019:total_2023,
+    names_to = "year",
+    names_prefix = "total_",
+    values_to = "value"
+  ) %>% 
+  mutate(
+    rev_source = ifelse(rev_source == "public funding", "local & state public funding", rev_source),
+    rev_source = factor(rev_source, levels = c("local & state public funding", "system-generated revenues", "federal aid")))
+
+#plot
+plot2 <- ggplot(data = rev, aes(x=year, y=value, fill = forcats::fct_rev(rev_source), group=forcats::fct_rev(rev_source))) +
+  geom_bar(stat = "identity", position = "stack", width = 0.5) + 
+  theme_cmap(xlab = element_blank(),
+             gridlines = "h", 
+             axislines = "none",
+             ylab = "Regional operating budget") + 
+  scale_y_continuous(labels = scales::label_dollar(scale_cut = scales::cut_short_scale()),
+                     breaks = c(0,1000000000,2000000000,3000000000,3500000000))+
+  theme(axis.title.x = element_blank()) + 
+  scale_fill_manual(values = rev(pal_rev),
+                    name = element_blank(),
+                    labels = rev(str_to_sentence(levels(rev$rev_source))),
+                    guide = guide_legend(reverse = T))
+
+finalize_plot(
+  plot = plot2,
+  title = "Federal aid plugged the budget gap left behind by lower fare revenue due to the pandemic",
+  caption = "Source: RTA Regional Operating Budget 2019-2023",
+  sidebar_width = 0,
+  caption_align = 0,
+  overrides = list(
+    margin_plot_r = 0
+  ),
+  mode = "png", 
+  filename = here("output", "rta_revenues"),
+  overwrite = TRUE
+)
+
+
+# Public funding plot -----------------------------------------------------
+
+pub_fund <-
+  read_csv(here("input", "part", "rta_public_funding.csv")) %>%
+  group_by(year) %>%
+  mutate(
+    source = factor(
+      source,
+      levels = c(
+        "RTA sales tax",
+        "Federal relief funding",
+        "Public transportation fund",
+        "State financial assistance",
+        "Real estate transfer tax",
+        "Other RTA revenues",
+        "Federal discretionary funding",
+        "State funding for ADA paratransit",
+        "Positive budget variance"
+      )
+    ),
+    share = value / sum(value),
+    year = as.character(year)
+  ) %>%
+  arrange(desc(value), .by_group = TRUE) %>%
+  ungroup()
+
+pub_fund$lab <- str_wrap(paste0(pub_fund$source," - ",as.character(round(pub_fund$share*100)),"%"))
+pub_fund$lab[c(5:7,13:16)] <- NA
+
+pal_3 <- c("#008fd5", "#6dae4f", "#d0e4a4", "#d3b42b", "#eb6a60", "#2d4147", "#2d4147", "#2d4147", "#2d4147")
+
+lab_3 = c()
+for (i in 1:length(pub_fund$lab)) {
+  lab_3[i] <-  "#00093f"
+}
+
+fontface_3 = c()
+for (i in 1:length(pub_fund$lab)) {
+  fontface_3[i] <-  "bold"
+}
+
+annot_text_3 <- data.frame(
+  label = c("Other (2%)"),
+  year = "2019",
+  agency = "rta",
+  source = "Other RTA revenues",
+  x = 0,
+  y = 0.99
+)
+
+annot_text_4 <- data.frame(
+  label = c("Other (<1%)"),
+  year = "2023",
+  agency = "rta",
+  source = "Other RTA revenues",
+  x = 0,
+  y = 0.99
+)
+
+pubfund_text_2019 <- data.frame(
+  label = c("$1.8 billion of public funding"),
+  year = "2019",
+  agency = "rta",
+  expense = "Other",
+  x = 0,
+  y = 0.99
+)
+
+pubfund_text_2023 <- data.frame(
+  label = c("$2.2 billion of public funding"),
+  year = "2023",
+  agency = "rta",
+  expense = "Other",
+  x = 0,
+  y = 0.99
+)
+
+plot3 <- 
+ggplot(data = pub_fund, aes(x=agency, y=share)) +
+  geom_bar(aes(fill=fct_rev(source)),stat = "identity", position = "stack", width = 0.82) + 
+  theme_cmap(gridlines = "none", 
+             axislines = "none") + 
+  scale_y_continuous(labels = scales::label_percent(),
+                     breaks = c(0,.20,.40,.60,.80,1)) +
+  theme(axis.text.x = element_blank(),
+        strip.text = element_text(hjust = 0.5),
+        axis.text.y = element_blank(),
+        legend.position = "none",
+  ) + 
+  scale_fill_manual(values = rev(pal_3),
+                    name = element_blank(),
+                    guide = guide_legend(reverse = T)) +
+  geom_text(aes(label = str_wrap(lab), hjust=0.478, fontface = fontface_3), size=4, show.legend = FALSE,
+            na.rm = TRUE, position = position_stack(vjust = 0.5, reverse = T), stat = "identity") +
+  #coord_cartesian(clip = "off") + 
+  facet_wrap(~year, strip.position = "bottom", ncol = 2)+
+  geom_label(data = annot_text_3,
+             aes(label=str_wrap(label),
+                 x=1,
+                 y=1.03,
+                 family="Whitney Semibold"),
+             size=3.6,
+             label.size = NA,
+             fill="#FFFFFF")+
+  geom_label(data = annot_text_4,
+             aes(label=str_wrap(label),
+                 x=1,
+                 y=1.03,
+                 family="Whitney Semibold"),
+             size=3.6,
+             label.size = NA,
+             fill="#FFFFFF") + 
+  geom_text(data = pubfund_text_2019,
+             aes(label=str_wrap(label),
+                 x=0.55,
+                 y=0.5,
+                 family="Whitney Semibold"),
+             size=4.5,
+             angle = 90) + 
+  geom_text(data = pubfund_text_2023,
+             aes(label=str_wrap(label),
+                 x=0.55,
+                 y=0.5,
+                 family="Whitney Semibold"),
+             size=4.5,
+             angle = 90)
+
+
+# finalize
+finalize_plot(
+  plot = plot3,
+  title = "RTA public operating funding, 2019 (actual) and 2023 (budgeted)",
+  caption = "
+  Other public funding comes from the state for ADA paratransit, federal discretionary funding, positive budget variances, and other RTA revenues.
+  <br><br>
+  Source: RTA Adopted 2019 and 2023 Operating Budget",
+  caption_align = 0,
+  sidebar_width = 1.5,
+  overrides = list(
+    margin_plot_r = 0
+  ),
+  mode = "pdf", 
+  filename = here("output", "rta_public_funding"),
+  overwrite = TRUE
+)
+
+# Bus Operators Plot ------------------------------------------------------
+
+bus_ops <- read_csv(here("input", "part", "operators.csv")) %>% 
+  pivot_longer(cols = `Pace (full time)`:`CTA`, names_to = "agency", values_to = "operators") %>% 
+  mutate(year = as.character(year))
+
+pal_4 <- c("#1e478e", "#3e6730", "#d3b42b")
+
+plot4 <- 
+ggplot(data = bus_ops,
+       mapping = aes(x = year,
+                     y = operators,
+                     fill=agency)) +
+  #geom_area() +
+  geom_col(width = 0.60,
+           position = position_dodge(width = 0.7)) +
+  theme_cmap() +
+  scale_fill_manual(values = pal_4,
+                    name = element_blank(),
+                    guide = guide_legend(reverse = F)) +
+  scale_y_continuous(labels = scales::label_comma())
+  
+finalize_plot(
+  plot = plot4,
+  title = "CTA and Pace bus operators, 2019-2022",
+  caption = "Source: CMAP analysis of Regional Transportation Authority Mapping and Statistics (RTAMS) data",
+  sidebar_width = 0,
+  caption_align = 0,
+  overrides = list(
+    margin_plot_r = 0
+  ),
+  mode = "png", 
+  filename = here("output", "bus_operators"),
+  overwrite = TRUE
+)
+
+
+# Detailed revenues for 2019 plot -----------------------------------------
+
+# data
+revs <- read_csv(here("input", "part", "rta_revenues_2019.csv")) %>% 
+  mutate(source = as_factor(source))
+
+revs$label <- paste0(revs$source," - ",as.character(round(revs$revenue_share*100)),"%")
+revs$label[c(3:6)] <- NA
+
+pal_5 <- c("#008fd5", "#6dae4f", "#d0e4a4", "#d3b42b", "#eb6a60", "#2d4147")
+
+fontface_5 = c()
+for (i in 1:length(revs$label)) {
+  fontface_5[i] <-  "bold"
+}
+
+# plot
+plot5 <- 
+  ggplot(data = revs, aes(x=region, y=revenue_share)) +
+  coord_flip()+
+  geom_bar(aes(fill=rev(source)),
+           stat = "identity", 
+           position = position_stack(vjust = 1), 
+           width = 0.6) + 
+  theme_cmap(ylab = element_blank(),
+             xlab = element_blank(),
+             gridlines = "none", 
+             axislines = "none") +
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        legend.position = "none",
+  ) + 
+  scale_fill_manual(values = rev(pal_5),
+                   name = element_blank(),
+                   labels = rev(revs$source)) +
+  geom_text(aes(label = label, 
+                vjust=case_when(
+                  source == "Public transportation fund" ~ 13,
+                  source == "State financial assistance" ~ -13,
+                  source == "Real estate transfer tax" ~ 16,
+                  source == "Other" ~ -10
+                ), 
+                hjust = case_when(
+                  source == "Public transportation fund" ~ 1.1,
+                  source == "State financial assistance" ~ 0.8,
+                  source == "Real estate transfer tax" ~ 0.8,
+                  source == "Other" ~ 0.3
+                ),
+                fontface = fontface_5), 
+            size=4.7, 
+            show.legend = FALSE,
+            na.rm = TRUE, 
+            stat = "identity",
+            position = position_stack(vjust = 0.5, reverse = F)) +
+  # arrow for PTF
+  geom_curve(
+    x = 0.59, xend = 0.69, y = 0.84, yend= 0.87,
+    arrow = arrow(type = "open", length = unit(0.02, "npc")),
+    curvature = 0.4) + 
+  # arrow for state fin. assist.
+  geom_curve(
+    x = 1.4, xend = 1.32, y = 0.9, yend= 0.945,
+    arrow = arrow(type = "open", length = unit(0.02, "npc")),
+    curvature = -0.2) + 
+  # arrow for RETT
+  geom_curve(
+    x = 0.53, xend = 0.69, y = 0.94, yend= 0.983,
+    arrow = arrow(type = "open", length = unit(0.02, "npc")),
+    curvature = 0.2) + 
+  # arrow for other
+  geom_curve(
+    x = 1.3, xend = 1.2, y = 1.05, yend= 1.01,
+    arrow = arrow(type = "open", length = unit(0.02, "npc")),
+    curvature = -0.2) + 
+  scale_y_continuous(expand = expansion(add = 0.07))
+
+# finalize
+finalize_plot(
+  plot = plot5,
+  title = "System-generated revenues made up almost 40% of the total operating revenue in 2019",
+  caption = "Source: RTA Adopted 2019 Operating Budget",
+  sidebar_width = 0,
+  caption_align = 0,
+  overrides = list(
+    margin_plot_r = 0
+  ),
+  mode = "pdf", 
+  filename = here("output", "rta_revenues_2019"),
+  overwrite = TRUE
+)
+
+
+# Bus lane miles comparison -----------------------------------------------
+bus_lane <- read_csv(here("input", "part", "bus_lane_comparison.csv")) %>% 
+  arrange(desc(Bus_Lane_Miles)) %>% 
+  mutate(City = as_factor(City))
+
+plot6 <- 
+  ggplot(data = bus_lane,
+         mapping = aes(x = City,
+                       y = Bus_Lane_Miles,
+                       fill = City)) +
+  #geom_area() +
+  geom_col(width = .8) +
+  theme_cmap(legend.position = "none") + 
+  scale_y_continuous(breaks = c(0, 50, 100, 150, 200, 250, 300)) + 
+  cmap_fill_highlight(field = bus_lane$City,
+                      value = c("Pace", "CTA"),
+                      color_value = c("#d3b42b","#008fd5"))
+
+finalize_plot(
+  plot = plot6,
+  title = 'Miles of dedicated busway for <span style="color:#008fd5;">CTA Bus</span> and <span style="color:#d3b42b;">Pace</span> versus peer regions, 2021',
+  caption = 'Source: CMAP analysis of National Transit Database. Pace figures include "Bus on Shoulder" program',
+  sidebar_width = 0,
+  caption_align = 1,
+  overrides = list(
+    margin_plot_r = 0
+  ),
+  mode = "png", 
+  filename = here("output", "bus_lane_miles"),
+  overwrite = TRUE
+)
+
+# Stacked ridership chart -------------------------------------------------
+ridership <- read.csv(here("input", "part", "ridership.csv"))
+
+plot_ridership <- ridership %>%
+  mutate(
+    Mode = as.factor(Mode) %>%
+      fct_relevel("Pace ADA", "Pace", "Metra", "CTA Rail", "CTA Bus"))
+
+p <- 
+  ggplot(data = plot_ridership, aes(x = Year, y = Ridership, fill = Mode)) +
+  geom_area() +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  scale_fill_manual(values = c("#E4D07A","#d3b42b","#6dae4f","#008fd5","#ade0ee")) +
+  theme_cmap(gridlines = "h") +
+  scale_x_continuous(labels = abbr_years(full_by_year = c(2010)), breaks = seq(2010, 2022, by = 1)) +
+  scale_y_continuous(labels = scales::label_number(suffix = "M"), breaks = seq(0, 700, by = 200))
+
+finalize_plot(
+  plot = p,
+  title = "System ridership, 2010-2022 (annual unlinked passenger trips, in millions)",
+  caption = "Note: Unlinked passenger trips are defined as the number of passengers who board public transportation vehicles. Passengers are counted each time they board vehicles, no matter how many they use for their trip.
+    <br><br>
+    Source: Regional Transportation Authority Mapping and Statistics",
+  filename = here("output", "ridership_area"),
+  mode = "pdf",
+  overwrite = T,
+  sidebar_width = 0)

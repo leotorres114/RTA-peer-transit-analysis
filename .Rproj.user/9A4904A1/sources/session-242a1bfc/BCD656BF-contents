@@ -1,0 +1,31 @@
+library(tidyverse)
+library(here)
+
+# Build peer table
+ntdid <- c(50066, 90154, 10003, 20008, 30019, 30030, 40022, 50118, 20100, 20078, 20080, 50113, 90014, 40029, 90036, 90013, 30051)
+agency <- c("Chicago Transit Authority",
+            "Los Angeles County Metropolitan Transportation Authority",
+            "Massachusetts Bay Transportation Authority",
+            "New York City Transit",
+            "Southeastern Pennsylvania Transportation Authority",
+            "Washington Metropolitan Area Transit Authority",
+            "Metropolitan Atlanta Rapid Transit Authority",
+            "Northeast Illinois Regional Commuter Railroad Corporation",
+            "MTA Long Island Rail Road",
+            "Metro-North Commuter Railroad Company",
+            "New Jersey Transit",
+            "Pace - Suburban Bus Division",
+            "Alameda-Contra Costa Transit District",
+            "Broward County Board of County Commissioners",
+            "Orange County Transportation Authority",
+            "Santa Clara Valley Transportation Authority",
+            "Montgomery County, Maryland")
+acronym <- c("CTA","LACMTA","MBTA","NYCT","SEPTA","WMATA","MARTA", "Metra","LIRR", "MNCR", "NJT", 
+             "Pace", "ACT", "BCT", "OCTA", "VTA", "RIDE ON")
+modes <- c("urban_rail/urban_bus", "urban_bus", "urban_rail/urban_bus/commuter_rail", "urban_rail/urban_bus", "urban_rail/urban_bus/commuter_rail",
+           "urban_rail/urban_bus", "urban_rail", "commuter_rail", "commuter_rail", "commuter rail", "commuter rail", "suburban_bus",
+           "suburban_bus", "suburban_bus", "suburban_bus", "suburban_bus", "suburban_bus")
+
+peers <- tibble(ntdid, agency, acronym, modes)
+
+write_csv(peers, here("output/rta_peers_ntd.csv"))
