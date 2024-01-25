@@ -1,2 +1,4 @@
 # RTA Peer Service Analysis
- Stores source data, scripts, charts, and tables related to a transit service recovery analysis conducted by CMAP staff.
+This repository stores the source data, scripts, charts, and tables related to a transit service recovery analysis conducted by CMAP staff. These data serve as supporting evidence for the policy brief: Transit ridership and service trends at the RTA service boards and peer agencies.
+
+The analysis explores recent changes in transit ridership and service levels in northeastern Illinois. It compares the performance of the region’s public transit operators – the Chicago Transit Authority (CTA), Metra, and Pace – with that of their peers. Since the onset of the COVID-19 pandemic, the regional transit system has faced enduring challenges. The pandemic led to abrupt shifts in travel, such as a significant reduction in ridership related to remote work. It also exacerbated longstanding issues, such as frequency, reliability, safety, and security. 
