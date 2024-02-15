@@ -7,9 +7,9 @@ library(lubridate)
 source("src/peer_table.R")
 
 # Constants
-FILE_NAME <-  "ntd_monthly_nov_2023.xlsx"
+FILE_NAME <-  "ntd_monthly_dec_2023.xlsx"
 FIRST_MONTH <-  '1/2002'
-LAST_MONTH <-  '11/2023'
+LAST_MONTH <-  '12/2023'
 
 # Download latest monthly data from the link below and rename
 # (file path may be too long with original file name):

@@ -1,0 +1,128 @@
+library(tidyverse)
+library(here)
+library(splitstackshape)
+
+# Build peer table
+ntdid <-
+  c(
+    50066,
+    90154,
+    10003,
+    20008,
+    30019,
+    30030,
+    40022,
+    50118,
+    20100,
+    20078,
+    20080,
+    50113,
+    90014,
+    40029,
+    90036,
+    90013,
+    30051
+  )
+
+agency <-
+  c(
+    "Chicago Transit Authority",
+    "Los Angeles County Metropolitan Transportation Authority",
+    "Massachusetts Bay Transportation Authority",
+    "New York City Transit",
+    "Southeastern Pennsylvania Transportation Authority",
+    "Washington Metropolitan Area Transit Authority",
+    "Metropolitan Atlanta Rapid Transit Authority",
+    "Northeast Illinois Regional Commuter Railroad Corporation",
+    "MTA Long Island Rail Road",
+    "Metro-North Commuter Railroad Company",
+    "New Jersey Transit",
+    "Pace - Suburban Bus Division",
+    "Alameda-Contra Costa Transit District",
+    "Broward County Board of County Commissioners",
+    "Orange County Transportation Authority",
+    "Santa Clara Valley Transportation Authority",
+    "Montgomery County, Maryland"
+  )
+
+acronym <-
+  c(
+    "CTA",
+    "LACMTA",
+    "MBTA",
+    "NYCT",
+    "SEPTA",
+    "WMATA",
+    "MARTA",
+    "Metra",
+    "LIRR",
+    "MNCR",
+    "NJT",
+    "Pace",
+    "ACT",
+    "BCT",
+    "OCTA",
+    "VTA",
+    "RIDE ON"
+  )
+
+mode <-
+  c(
+    "urban_rail/urban_bus",
+    "urban_bus",
+    "urban_rail/urban_bus/commuter_rail",
+    "urban_rail/urban_bus",
+    "urban_rail/urban_bus/commuter_rail",
+    "urban_rail/urban_bus",
+    "urban_rail",
+    "commuter_rail",
+    "commuter_rail",
+    "commuter_rail",
+    "commuter_rail",
+    "suburban_bus",
+    "suburban_bus",
+    "suburban_bus",
+    "suburban_bus",
+    "suburban_bus",
+    "suburban_bus"
+  )
+
+peers <- tibble(ntdid, agency, acronym, mode)
+
+# split modes into columns to create clean list of peers
+peers_clean <- peers %>%
+  splitstackshape::cSplit(
+    .,
+    "mode",
+    sep = "/",
+    stripWhite = TRUE,
+    type.convert = FALSE
+  ) %>%
+  pivot_longer(.,
+               cols = mode_1:mode_3,
+               names_to = "temp",
+               values_to = "mode") %>%
+  select(-temp) %>%
+  drop_na()
+
+# match RTA defined modes with NTD mode codes
+
+ntd_modes_map <- c(
+  urban_rail = "HR",
+  urban_bus = "MB",
+  commuter_rail = "CR",
+  suburban_bus = "MB"
+)
+
+peers_clean$ntd_mode <- NA
+
+for (i in 1:nrow(peers_clean)) {
+  x = as.character(peers_clean$mode[i])
+  peers_clean$ntd_mode[i] <- ntd_modes_map[x]
+}
+
+# export clean peer table
+write_csv(peers_clean, here("processed_data", "rta_peers_ntd.csv"))
+
+# clear env
+rm(list = ls())

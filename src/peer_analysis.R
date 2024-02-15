@@ -26,17 +26,15 @@ ridership <- ridership %>%
   group_by(across(c(-type_of_svc,-ridership))) %>%
   summarise(ridership = sum(ridership))
 
-# projections.R provides a forecast for the remainder of the year
-# based on available monthly averages for each metric.
-
-source("src/projections.R")
-
 write_csv(rev_miles,
           here("processed_data", "vrm_peers_monthly_clean.csv"))
 write_csv(rev_hrs,
           here("processed_data", "vrh_peers_monthly_clean.csv"))
 write_csv(ridership,
           here("processed_data", "ridership_peers_monthly_clean.csv"))
+
+# manually adjust data due to reporting issues
+source("src/manual_data_fixes.R")
 
 # calculate annual figures for each agency and mode for all years
 rev_miles <- rev_miles %>%
@@ -72,7 +70,8 @@ rev_hrs <- rev_hrs %>%
   select(mode, agency, `2019`:`2023`)
 
 ridership <- ridership %>%
-  select(mode, agency, `2019`:`2023`)
+  select(mode, agency, `2019`:`2023`) %>% 
+  filter(agency != "LIRR")
 
 # calculate share of 2019 for each year
 
@@ -171,7 +170,6 @@ finalize_plot(
               <b>Urban bus</b>: NYC MTA, MBTA, WMATA, SEPTA, and LA Metro
               <b>Commuter rail</b>: MBTA, Metro North, Long Island Railroad, NJ Transit, SEPTA
               <br><b>Suburban bus</b>: AC Transit, Broward County Transit, OCTA, RIDE ON Montgomery, VTA
-              <br><br> 2023 forecast is derived from average monthly figures between January and November.
               <br><br>
               Source: Chicago Metropolitan Agency for Planning
               analysis of the National Transit Database."
@@ -227,7 +225,6 @@ finalize_plot(
               <b>Urban bus</b>: NYC MTA, MBTA, WMATA, SEPTA, and LA Metro
               <b>Commuter rail</b>: MBTA, Metro North, Long Island Railroad, NJ Transit, SEPTA
               <br><b>Suburban bus</b>: AC Transit, Broward County Transit, OCTA, RIDE ON Montgomery, VTA
-              <br><br> 2023 forecast is derived from average monthly figures between January and November.
               <br><br>
               Source: Chicago Metropolitan Agency for Planning
               analysis of the National Transit Database.",
@@ -282,7 +279,6 @@ finalize_plot(
               <b>Urban bus</b>: NYC MTA, MBTA, WMATA, SEPTA, and LA Metro
               <b>Commuter rail</b>: MBTA, Metro North, Long Island Railroad, NJ Transit, SEPTA
               <br><b>Suburban bus</b>: AC Transit, Broward County Transit, OCTA, RIDE ON Montgomery, VTA
-              <br><br> 2023 forecast is derived from average monthly figures between January and November.
               <br><br>
               Source: Chicago Metropolitan Agency for Planning
               analysis of the National Transit Database.",
@@ -336,9 +332,7 @@ for (i in modes_loop) {
       'Revenue hours as a share of 2019 on RTA and peer systems for ',
       modes[i]
     ),
-    caption = "2023 forecast is derived from average monthly figures between January and November.
-              <br><br>
-              Source: Chicago Metropolitan Agency for Planning
+    caption = "Source: Chicago Metropolitan Agency for Planning
               analysis of the National Transit Database.",
     filename = here("charts", paste0(i, "_rev_hrs")),
     mode = "png",
@@ -391,9 +385,7 @@ for (i in modes_loop) {
       'Revenue miles as a share of 2019 on RTA and peer systems for ',
       modes[i]
     ),
-    caption = "2023 forecast is derived from average monthly figures between January and November.
-              <br><br>
-              Source: Chicago Metropolitan Agency for Planning
+    caption = "Source: Chicago Metropolitan Agency for Planning
               analysis of the National Transit Database.",
     filename = here("charts", paste0(i, "_rev_miles")),
     mode = "png",
@@ -441,9 +433,7 @@ for (i in modes_loop) {
   finalize_plot(
     temp_plot,
     title = paste0('Ridership as a share of 2019 on RTA and peer systems for ', modes[i]),
-    caption = "2023 forecast is derived from average monthly figures between January and November.
-              <br><br>
-              Source: Chicago Metropolitan Agency for Planning
+    caption = "Source: Chicago Metropolitan Agency for Planning
               analysis of the National Transit Database.",
     filename = here("charts", paste0(i, "_ridership")),
     mode = "png",
