@@ -277,7 +277,7 @@ finalize_plot(
   caption = "Peer systems include:<br><br>
               <b>Urban rail</b>: NYC MTA, MBTA, WMATA, SEPTA, and MARTA
               <b>Urban bus</b>: NYC MTA, MBTA, WMATA, SEPTA, and LA Metro
-              <b>Commuter rail</b>: MBTA, Metro North, Long Island Railroad, NJ Transit, SEPTA
+              <b>Commuter rail</b>: MBTA, Metro North, NJ Transit, SEPTA
               <br><b>Suburban bus</b>: AC Transit, Broward County Transit, OCTA, RIDE ON Montgomery, VTA
               <br><br>
               Source: Chicago Metropolitan Agency for Planning
