@@ -9,25 +9,15 @@ With three years of hindsight, peer comparisons can highlight areas of opportuni
 
 CMAP’s Plan of Action for Regional Transit (PART) report, approved on October 11, 2023 and delivered to the Illinois General Assembly in December 2023, identifies recommendations on the strategies, reforms , and funding solutions necessary to create a stronger regional transit system. For more information, see the [PART report webpage](https://www.cmap.illinois.gov/programs/regional-transit-action).
 
-## Folder structure and descriptions
+## Repo structure
 ### src
-- `src/peer_table.R`
-- `src/get_data.R`
-- `src/projections.R`
-- `src/peer_analysis.R`
+- `src/peer_analysis.R`: Main source file. Runs `get_data.R`, cleans/formats/exports the data for the charts to the `processed_data` folder, and creates/exports [cmapplot](https://github.com/CMAP-REPOS/cmapplot)'s to the `charts` folder. 
+- `src/peer_table.R`: Builds a table of the RTA's peer systems with their associated identifiers from the National Transit Database (NTD).
+- `src/get_data.R`: Collects, cleans, and formats NTD service and ridership data. It sources `peer_table.R` and merges its output with NTD data.
+- `src/manual_data_fixes.R`: Because this is preliminary monthly data, there may be reporting issues from peer agencies. The script manually calculates and adjusts data if issues are identified.
 ### raw_data
-- `ntd_monthly_nov_2023.xlsx`
+- Stores the raw [monthly data](https://www.transit.dot.gov/ntd/data-product/monthly-module-adjusted-data-release) from the National Transit Database. 
 ### processed_data
-- `ridership_peers_annual.csv`
-- `ridership_peers_monthly.csv`
-- `ridership_peers_monthly_clean.csv`
-- `rta_peers_ntd.csv`
-- `vrh_peers_annual.csv`
-- `vrh_peers_monthly.csv`
-- `vrh_peers_monthly_clean.csv`
-- `vrm_peers_annual.csv`
-- `vrm_peers_monthly.csv`
-- `vrm_peers_monthly_clean.csv`
+- Stores monthly and annual ridership and vehicle revenue hour data for the RTA service boards and peer systems, as well as the output of `peer_table.R`. CSV files ending in `*_monthly_clean.csv` report combined directly operated and purchased transportation figures for each agency and mode.
 ### charts
-- `[mode]_[metric].png`
-- `[mode]_summary.png`
+- Stores the charts from `peer_analysis.R`.
